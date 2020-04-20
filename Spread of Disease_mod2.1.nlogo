@@ -1,5 +1,8 @@
 turtles-own [
   infected?    ;; has the person been infected with the disease?
+  recovered?   ;; immunity
+  hospitalized?;; recover faster, reduce spread
+  recovery-time;; time left to be sick
 ]
 
 patches-own [
@@ -25,6 +28,8 @@ end
 to make-turtles
   create-turtles num-people [
     set infected? false
+    set hospitalized? false
+    ret recovered? false ; could give natural immunity
     setxy random-xcor random-ycor
   ]
 end
@@ -43,6 +48,7 @@ end
 to infect
   ask n-of num-infected turtles [
     set infected? true
+    set recovery-time 14 ;; should be a slider + randomness
     if variant = "environmental" [
       ;; the patch under an infected turtle becomes infected:
       set p-infected? true
@@ -53,7 +59,10 @@ end
 to recolor
   ask turtles [
     ;; infected turtles are red, others are gray
-    set color ifelse-value infected? [ red ] [ gray ]
+    set color grey
+    set color ifelse-value infected? [ red ] [ color ]
+    set color ifelse-value recovered? [ blue ] [ color ]
+    set color ifelse-value hospitalized? [ cyan ] [ color ]
   ]
   ask patches [
     ;; infected patches are yellow, others are black
@@ -320,7 +329,7 @@ CHOOSER
 variant
 variant
 "mobile" "network" "environmental"
-1
+0
 
 SLIDER
 190
