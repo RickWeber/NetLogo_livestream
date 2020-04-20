@@ -3,6 +3,7 @@ turtles-own [
   recovered?   ;; immunity
   hospitalized?;; recover faster, reduce spread
   recovery-time;; time left to be sick
+  cost         ;; could be cost of illness or missed work/precautions.
 ]
 
 patches-own [
@@ -29,7 +30,7 @@ to make-turtles
   create-turtles num-people [
     set infected? false
     set hospitalized? false
-    ret recovered? false ; could give natural immunity
+    set recovered? false ; could give natural immunity
     setxy random-xcor random-ycor
   ]
 end
@@ -77,6 +78,7 @@ end
 to go
   if all? turtles [ infected? ] [ stop ]
   spread-infection
+  treat ;; deal with hospitalized turtles
   recolor
   move
   tick
@@ -87,13 +89,19 @@ to spread-infection
     ;; count down to the end of the patch infection
     set infect-time infect-time - 1
   ]
-  ask turtles with [ infected? ] [
+  ask turtles with [ infected? and not hospitalized? ] [
     ifelse variant = "network" [
       ;; in the network variant, the disease spreads through links
-      ask link-neighbors [ set infected? true ]
+      ask link-neighbors [
+        set infected? true
+        set recovery-time 14 ; should slider
+      ] ; slider prob-of-spread
     ]
     [ ;; in other variants, the disease spreads spatially
-      ask turtles-here [ set infected? true ]
+      ask turtles-here with [not infected? and not recovered?] [ ;; ???
+        set infected? true
+        set recovery-time 14 ; should be a slider
+      ]
       if variant = "environmental" [
         ;; in the environmental variant, it spreads to patches as well
         set p-infected? true
@@ -105,10 +113,30 @@ to spread-infection
     ;; the turtles that are on an infected patch become infected
     ask turtles with [ p-infected? ] [
       set infected? true
+      set recovery-time 14 ; should be a slider
     ]
   ]
   ask patches with [ p-infected? and infect-time <= 0 ] [
     set p-infected? false
+  ]
+end
+
+to treat
+  ; decrease time to recovery
+  ask turtles with [ infected? ] [
+    set recovery-time recovery-time - 1
+  ]
+  ask turtles with [ infected? and not hospitalized? ][
+    if capacity >= 1 [
+      set hospitalized? true
+    ]
+  ]
+  ask turtles with [ hospitalized? ][
+    set recovery-time recovery-time - 0.5 ;; could be a slider: hosp-effectiveness
+  ]
+  ask turtles with [infected? and recovery-time <= 0 ][
+    set recovered? true ; could be a slider
+    set infected? false
   ]
 end
 
@@ -122,8 +150,8 @@ to move
     repeat 10 [ do-layout ]
   ]
   [ ;; in non network variants, persons move around randomly
-    ask turtles [
-      fd 1
+    ask turtles with [not hospitalized?] [
+      fd 1 ;; slider: speed
       rt random 30
       lt random 30
     ]
@@ -135,22 +163,13 @@ to do-layout
   display  ;; so we get smooth animation
 end
 
-;; This procedure allows you to run the model multiple times
-;; and measure how long it takes for the disease to spread to
-;; all people in each run. For more complex experiments, you
-;; would use the BehaviorSpace tool instead.
-to my-experiment
-  repeat 10 [
-    set num-people 50
-    setup
-    while [ not all? turtles [ infected? ] ] [ go ]
-    print ticks
-  ]
+;;;;;;;;;;;;;;;;;
+;;; Reporters ;;;
+;;;;;;;;;;;;;;;;;
+
+to-report capacity
+  report hospital-beds - count turtles with [ hospitalized? ]
 end
-
-
-; Copyright 2008 Uri Wilensky.
-; See Info tab for full copyright and license.
 @#$#@#$#@
 GRAPHICS-WINDOW
 393
@@ -344,6 +363,21 @@ disease-decay
 1
 1
 ticks
+HORIZONTAL
+
+SLIDER
+190
+110
+380
+143
+hospital-beds
+hospital-beds
+0
+100
+50.0
+1
+1
+NIL
 HORIZONTAL
 
 @#$#@#$#@
