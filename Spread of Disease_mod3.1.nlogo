@@ -6,7 +6,7 @@ turtles-own [
   recovery-time
 ]
 
-global [ cumulative-costs ]
+globals [ cumulative-costs ]
 
 patches-own [
   p-infected?  ;; in the environmental variant, has the patch been infected?
@@ -31,6 +31,7 @@ end
 to make-turtles
   create-turtles num-people [
     set infected? false
+    set recovered? false
     set hospitalized? false
     setxy random-xcor random-ycor
   ]
@@ -50,6 +51,7 @@ end
 to infect
   ask n-of num-infected turtles [
     set infected? true
+    set recovery-time 14 ; slider + randomness
     if variant = "environmental" [
       ;; the patch under an infected turtle becomes infected:
       set p-infected? true
@@ -77,11 +79,37 @@ end
 
 to go
   if all? turtles [ infected? ] [ stop ]
+  if all? turtles [ not infected? ] [ stop ]
+  ask turtles [set cost 0]
   spread-infection
+  treat
   recolor
   move
   set cumulative-costs cumulative-costs + total-costs
   tick
+end
+
+to treat
+  ask turtles with [ infected? ][
+    set recovery-time recovery-time - 1
+  ]
+  ask turtles with [ infected? and not hospitalized? and recovery-time < 11 ][
+    if capacity >= 1 [
+      set hospitalized? true
+    ]
+    set cost cost + 10
+  ]
+  ask turtles with [hospitalized?][
+    set recovery-time recovery-time - 0.5 ; slider: hospital-effectiveness
+    set cost cost + 10
+  ]
+  ask turtles with [ infected? and recovery-time <= 0 ][
+   set recovered? true
+   set hospitalized? false
+   set infected? false
+  ]
+  ; hospitalize sick turtles
+  ; impose costs
 end
 
 to spread-infection
@@ -89,13 +117,19 @@ to spread-infection
     ;; count down to the end of the patch infection
     set infect-time infect-time - 1
   ]
-  ask turtles with [ infected? ] [
+  ask turtles with [ infected? and not hospitalized? ] [
     ifelse variant = "network" [
       ;; in the network variant, the disease spreads through links
-      ask link-neighbors [ set infected? true ]
+      ask link-neighbors with [ not infected? and not recovered? ] [
+        set infected? true  ; slider random chance of spreading
+        set recovery-time 14 ; slider + randomness
+      ]
     ]
     [ ;; in other variants, the disease spreads spatially
-      ask turtles-here [ set infected? true ]
+      ask turtles-here with [ not infected? and not recovered? ] [
+        set infected? true
+        set recovery-time 14 ; slider + randomness
+      ]
       if variant = "environmental" [
         ;; in the environmental variant, it spreads to patches as well
         set p-infected? true
@@ -107,6 +141,7 @@ to spread-infection
     ;; the turtles that are on an infected patch become infected
     ask turtles with [ p-infected? ] [
       set infected? true
+      set recovery-time 14 ; slide + randomness
     ]
   ]
   ask patches with [ p-infected? and infect-time <= 0 ] [
@@ -124,8 +159,8 @@ to move
     repeat 10 [ do-layout ]
   ]
   [ ;; in non network variants, persons move around randomly
-    ask turtles [
-      fd 1
+    ask turtles with [ not hospitalized? ][
+      fd 1 ; slider: speed
       rt random 30
       lt random 30
     ]
@@ -155,7 +190,7 @@ end
 ; See Info tab for full copyright and license.
 
 to-report total-costs
-;  let private sum
+  let private-costs sum [cost] of turtles
   report 0
 end
 
@@ -298,7 +333,7 @@ num-infected
 num-infected
 0
 num-people
-3.0
+120.0
 1
 1
 NIL
@@ -320,7 +355,10 @@ true
 true
 "" "if variant = \"environmental\" [\n  create-temporary-plot-pen \"patches\"\n  plotxy ticks count patches with [ p-infected? ] / count patches\n]"
 PENS
-"people" 1.0 0 -5298144 true "" "plot count turtles with [ infected? ] / count turtles"
+"infected?" 1.0 0 -5298144 true "" "plot count turtles with [ infected? ] / count turtles"
+"hospitalized?" 1.0 0 -11221820 true "" "plot count turtles with [ hospitalized? ] / count turtles"
+"recovered?" 1.0 0 -13345367 true "" "plot count turtles with [ recovered? ] / count turtles"
+"untouched?" 1.0 0 -7500403 true "" "plot count turtles with [ not infected? and not recovered? and not hospitalized? ] / count turtles"
 
 MONITOR
 10
@@ -341,7 +379,7 @@ CHOOSER
 variant
 variant
 "mobile" "network" "environmental"
-1
+0
 
 SLIDER
 190
