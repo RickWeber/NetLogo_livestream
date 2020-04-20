@@ -96,19 +96,17 @@ to treat
     if capacity >= 1 [
       set hospitalized? true
     ]
-    set cost cost + 20
+    set cost cost + cost-of-sick-home
   ]
   ask turtles with [hospitalized?][
     set recovery-time recovery-time - 0.5 ; slider: hospital-effectiveness
-    set cost cost + 10
+    set cost cost + cost-of-sick-hosp
   ]
   ask turtles with [ infected? and recovery-time <= 0 ][
    set recovered? true
    set hospitalized? false
    set infected? false
   ]
-  ; hospitalize sick turtles
-  ; impose costs
 end
 
 to get-infected
@@ -125,7 +123,7 @@ to spread-infection
     ifelse variant = "network" [
       ;; in the network variant, the disease spreads through links
       ask link-neighbors with [ not infected? and not recovered? ] [
-        get-infected
+        if random 100 < 80 [ get-infected ] ; slider
       ]
     ]
     [ ;; in other variants, the disease spreads spatially
@@ -135,7 +133,6 @@ to spread-infection
       if variant = "environmental" [
         ;; in the environmental variant, it spreads to patches as well
         set p-infected? true
-        get-infected
       ]
     ]
   ]
@@ -161,7 +158,7 @@ to move
   ]
   [ ;; in non network variants, persons move around randomly
     ask turtles with [ not hospitalized? ][
-      fd 1 ; slider: speed
+      fd speed ; slider: speed
       rt random 30
       lt random 30
     ]
@@ -171,19 +168,6 @@ end
 to do-layout
   layout-spring turtles with [ any? link-neighbors ] links 0.4 6 1
   display  ;; so we get smooth animation
-end
-
-;; This procedure allows you to run the model multiple times
-;; and measure how long it takes for the disease to spread to
-;; all people in each run. For more complex experiments, you
-;; would use the BehaviorSpace tool instead.
-to my-experiment
-  repeat 10 [
-    set num-people 50
-    setup
-    while [ not all? turtles [ infected? ] ] [ go ]
-    print ticks
-  ]
 end
 
 
@@ -208,6 +192,12 @@ to-report capacity
   report hospital-beds - (count turtles with [hospitalized?])
 end
 
+;;; future additions:
+;; randomly test turtles, maybe catch some early.
+;; should have some costs for those tests.
+
+;; make environmental variant work
+;(current problem: patches are immediately cleaned)
 @#$#@#$#@
 GRAPHICS-WINDOW
 393
@@ -279,7 +269,7 @@ num-people
 num-people
 2
 500
-119.0
+500.0
 1
 1
 NIL
@@ -415,7 +405,7 @@ hospital-beds
 hospital-beds
 0
 100
-83.0
+50.0
 1
 1
 NIL
@@ -462,6 +452,7 @@ PENS
 "total-costs" 1.0 0 -16777216 true "" "plot total-costs"
 "private-costs" 1.0 0 -1184463 true "" "plot private-costs"
 "hosp-costs" 1.0 0 -7500403 true "" "plot hosp-costs"
+"cumulative costs" 1.0 0 -2674135 true "" "plot cumulative-costs"
 
 SLIDER
 15
@@ -472,7 +463,7 @@ empty-bed-cost
 empty-bed-cost
 0
 100
-50.0
+12.0
 1
 1
 NIL
@@ -489,6 +480,51 @@ filled-bed-cost
 100
 50.0
 1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+15
+630
+192
+663
+cost-of-sick-hosp
+cost-of-sick-hosp
+0
+100
+50.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+15
+675
+197
+708
+cost-of-sick-home
+cost-of-sick-home
+0
+100
+50.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+225
+540
+397
+573
+speed
+speed
+0
+2
+1.0
+0.1
 1
 NIL
 HORIZONTAL
