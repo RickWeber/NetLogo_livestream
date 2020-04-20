@@ -11,6 +11,10 @@ patches-own [
   infect-time  ;; how long until the end of the patch infection?
 ]
 
+globals [
+  cumulative-cost
+]
+
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Setup Procedures ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;
@@ -77,10 +81,13 @@ end
 
 to go
   if all? turtles [ infected? ] [ stop ]
+  if all? turtles [ not infected? ] [ stop ]
+  ask turtles [ set cost 0 ]
   spread-infection
   treat ;; deal with hospitalized turtles
   recolor
   move
+  set cumulative-cost cumulative-cost + total-cost
   tick
 end
 
@@ -125,18 +132,29 @@ to treat
   ; decrease time to recovery
   ask turtles with [ infected? ] [
     set recovery-time recovery-time - 1
+    set cost cost + 10 ; slider - cost of illness
   ]
-  ask turtles with [ infected? and not hospitalized? ][
+  ask turtles with [ infected? and not hospitalized? and recovery-time < 11][
     if capacity >= 1 [
       set hospitalized? true
     ]
+    set cost cost + 10 ; slider - cost of untreated illness
   ]
+;  ask turtles with [ infected? and not hospitalized? ][
+;    if capacity >= 1 [
+;      if random 100 < 8 [
+;        set hospitalized? true
+;      ]
+;    ]
+;  ]
   ask turtles with [ hospitalized? ][
     set recovery-time recovery-time - 0.5 ;; could be a slider: hosp-effectiveness
+    set cost cost + 5
   ]
   ask turtles with [infected? and recovery-time <= 0 ][
-    set recovered? true ; could be a slider
+    set recovered? true ; could be a probabalistic slider
     set infected? false
+    set hospitalized? false ; leave the hospital
   ]
 end
 
@@ -169,6 +187,13 @@ end
 
 to-report capacity
   report hospital-beds - count turtles with [ hospitalized? ]
+end
+
+to-report total-cost
+  let fixed-cost hospital-beds * 10 ; slider
+  let occupancy-cost (count turtles with [hospitalized?] ) * 10 ; slider
+  let private-cost sum [ cost ] of turtles
+  report fixed-cost + occupancy-cost + private-cost
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -241,7 +266,7 @@ num-people
 num-people
 2
 500
-200.0
+500.0
 1
 1
 NIL
@@ -305,7 +330,7 @@ num-infected
 num-infected
 0
 num-people
-3.0
+86.0
 1
 1
 NIL
@@ -327,7 +352,10 @@ true
 true
 "" "if variant = \"environmental\" [\n  create-temporary-plot-pen \"patches\"\n  plotxy ticks count patches with [ p-infected? ] / count patches\n]"
 PENS
-"people" 1.0 0 -5298144 true "" "plot count turtles with [ infected? ] / count turtles"
+"infected?" 1.0 0 -5298144 true "" "plot count turtles with [ infected? ] / count turtles"
+"hospitalized?" 1.0 0 -11221820 true "" "plot count turtles with [ hospitalized? ] / count turtles"
+"recovered?" 1.0 0 -13345367 true "" "plot count turtles with [ recovered? ] / count turtles"
+"untouched" 1.0 0 -7500403 true "" "plot count turtles with [ color = grey ] / count turtles"
 
 MONITOR
 10
@@ -379,6 +407,57 @@ hospital-beds
 1
 NIL
 HORIZONTAL
+
+MONITOR
+185
+10
+247
+55
+NIL
+capacity
+0
+1
+11
+
+MONITOR
+255
+10
+327
+55
+NIL
+total-cost
+0
+1
+11
+
+MONITOR
+10
+520
+122
+565
+NIL
+cumulative-cost
+0
+1
+11
+
+PLOT
+860
+225
+1060
+375
+Cost of disease
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "plot cumulative-cost"
 
 @#$#@#$#@
 ## ACKNOWLEDGMENT
