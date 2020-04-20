@@ -50,8 +50,7 @@ end
 
 to infect
   ask n-of num-infected turtles [
-    set infected? true
-    set recovery-time 14 ; slider + randomness
+    get-infected
     if variant = "environmental" [
       ;; the patch under an infected turtle becomes infected:
       set p-infected? true
@@ -97,7 +96,7 @@ to treat
     if capacity >= 1 [
       set hospitalized? true
     ]
-    set cost cost + 10
+    set cost cost + 20
   ]
   ask turtles with [hospitalized?][
     set recovery-time recovery-time - 0.5 ; slider: hospital-effectiveness
@@ -112,6 +111,11 @@ to treat
   ; impose costs
 end
 
+to get-infected
+  set infected? true
+  set recovery-time 14 ; slider
+end
+
 to spread-infection
   ask patches with [ p-infected? ] [
     ;; count down to the end of the patch infection
@@ -121,27 +125,24 @@ to spread-infection
     ifelse variant = "network" [
       ;; in the network variant, the disease spreads through links
       ask link-neighbors with [ not infected? and not recovered? ] [
-        set infected? true  ; slider random chance of spreading
-        set recovery-time 14 ; slider + randomness
+        get-infected
       ]
     ]
     [ ;; in other variants, the disease spreads spatially
       ask turtles-here with [ not infected? and not recovered? ] [
-        set infected? true
-        set recovery-time 14 ; slider + randomness
+        get-infected
       ]
       if variant = "environmental" [
         ;; in the environmental variant, it spreads to patches as well
         set p-infected? true
-        set infect-time disease-decay
+        get-infected
       ]
     ]
   ]
   if variant = "environmental" [
     ;; the turtles that are on an infected patch become infected
     ask turtles with [ p-infected? ] [
-      set infected? true
-      set recovery-time 14 ; slide + randomness
+      get-infected
     ]
   ]
   ask patches with [ p-infected? and infect-time <= 0 ] [
@@ -189,9 +190,18 @@ end
 ; Copyright 2008 Uri Wilensky.
 ; See Info tab for full copyright and license.
 
+to-report private-costs
+  report sum [ cost ] of turtles
+end
+
+to-report hosp-costs
+  let baseline hospital-beds * empty-bed-cost
+  let occupancy-cost (count turtles with [hospitalized?]) * filled-bed-cost
+  report private-costs + baseline + occupancy-cost
+end
+
 to-report total-costs
-  let private-costs sum [cost] of turtles
-  report 0
+  report hosp-costs + private-costs
 end
 
 to-report capacity
@@ -269,7 +279,7 @@ num-people
 num-people
 2
 500
-200.0
+119.0
 1
 1
 NIL
@@ -333,7 +343,7 @@ num-infected
 num-infected
 0
 num-people
-120.0
+23.0
 1
 1
 NIL
@@ -379,7 +389,7 @@ CHOOSER
 variant
 variant
 "mobile" "network" "environmental"
-0
+2
 
 SLIDER
 190
@@ -405,7 +415,7 @@ hospital-beds
 hospital-beds
 0
 100
-50.0
+83.0
 1
 1
 NIL
@@ -432,6 +442,56 @@ total-costs
 0
 1
 11
+
+PLOT
+900
+180
+1280
+480
+costs
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+true
+"" ""
+PENS
+"total-costs" 1.0 0 -16777216 true "" "plot total-costs"
+"private-costs" 1.0 0 -1184463 true "" "plot private-costs"
+"hosp-costs" 1.0 0 -7500403 true "" "plot hosp-costs"
+
+SLIDER
+15
+535
+187
+568
+empty-bed-cost
+empty-bed-cost
+0
+100
+50.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+15
+585
+187
+618
+filled-bed-cost
+filled-bed-cost
+0
+100
+50.0
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## ACKNOWLEDGMENT
