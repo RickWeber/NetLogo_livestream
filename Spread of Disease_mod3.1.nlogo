@@ -133,6 +133,7 @@ to spread-infection
       if variant = "environmental" [
         ;; in the environmental variant, it spreads to patches as well
         set p-infected? true
+        set infect-time disease-decay
       ]
     ]
   ]
