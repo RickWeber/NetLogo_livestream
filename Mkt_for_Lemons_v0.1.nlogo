@@ -1,45 +1,104 @@
-; (economic) signaling model
-; buyers attempt to buy
+; (economic) signaling model / market for lemons
 
-;; buyers
-breed [buyers buyer]
-;; buyers forecast the productivity of a seller based on observables:
-; signal/credential
-; work history
+breed [employers employer]
+employers-own [ credential-premium base-wage profit ]
+;; implicitly forecast productivity of turtles with modification for credentialed turtles
 
-;; sellers
-breed [sellers seller]
-; sellers seek a high wage
-; decide whether or not to get a credential
-; have two types: high and low productivity (this could be more fine grained later)
+breed [workers worker]
+workers-own [ high-ability? credential? utility ]
+; work history as possible extension
 
-
+links-own [ wage production accepted? ] ; represent a contract
 
 
 to setup
   clear-all
+  make-those-turtles
   reset-ticks
 end
 
+to make-those-turtles
+  create-employers num-employers [
+    set color blue
+    set credential-premium random 100 ;; make sure this makes sense
+    set base-wage random 100 ;; make sure this makes sense
+    setxy base-wage credential-premium
+  ]
+  create-workers num-workers [
+    set color red
+    setxy random-xcor random-ycor
+    set credential? false
+    ifelse random-float 1 < pct-high-ability [ set high-ability? true ][ set high-ability? false ]
+  ]
+  ask workers with [ high-ability? ] [ set credential? true ] ; lazy credential process
+end
+
 to go
-  ;
+  ask employers [ search-for-workers ]
+  ask workers with [ count my-links > 0 ] [ take-best-offer ]
+  produce
+  if (ticks mod 3 = 0) [ evolve ] ; evolve every 3 periods
   tick
 end
 
+to produce
+  ask workers with [ count my-links = 1 ] [ ; workers with a job
+    ifelse high-ability? [
+      ask my-links [
+        set production 150
+      ]
+    ][
+      ask my-links [
+        set production 50
+      ]
+    ]
+    set utility utility + ([wage] of one-of my-links)
+  ]
+  ask employers [
+    set profit profit + (sum [ production ] of my-links) - (sum [ wage ] of my-links)
+  ]
+end
+
+to search-for-workers
+  hire one-of workers
+end
+
 to hire [ seller ]
-  create-link-to seller [
-    set wage 1
+  create-link-with seller [
+    set wage [ base-wage ] of myself ; self is the employer calling this procedure
+    if [ credential? ] of seller [
+      set wage wage + [ credential-premium ] of myself ; ditto
+    ]
+    set accepted? false
+  ]
+end
+
+to take-best-offer
+  ask max-one-of my-in-links [ wage ] [ set accepted? true ]
+  ask my-in-links with [not accepted?] [die]
+end
+
+to evolve
+  ; kill least profitable employers
+  ; sprout/mutate most profitable
+  ask min-one-of employers [ profit ] [ die ]
+  ask max-one-of employers [ profit ] [
+    hatch 1 [
+      set credential-premium credential-premium  + random-normal 0 10
+      set base-wage base-wage + random-normal 0 10
+      setxy base-wage credential-premium
+    ]
   ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
 210
 10
-647
-448
+824
+625
 -1
 -1
-13.0
+6.0
 1
 10
 1
@@ -49,15 +108,134 @@ GRAPHICS-WINDOW
 1
 1
 1
--16
-16
--16
-16
+0
+100
+0
+100
 0
 0
 1
 ticks
 30.0
+
+SLIDER
+12
+98
+184
+131
+num-workers
+num-workers
+0
+100
+50.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+13
+143
+185
+176
+num-employers
+num-employers
+0
+100
+50.0
+1
+1
+NIL
+HORIZONTAL
+
+BUTTON
+13
+24
+86
+57
+NIL
+setup
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+BUTTON
+108
+23
+171
+56
+NIL
+go
+T
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+SLIDER
+15
+191
+187
+224
+pct-high-ability
+pct-high-ability
+0
+1
+0.5
+0.01
+1
+NIL
+HORIZONTAL
+
+PLOT
+0
+237
+200
+387
+Profits
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 1 -16777216 true "" "histogram [ profit ] of employers"
+
+MONITOR
+25
+404
+307
+449
+NIL
+mean [credential-premium] of employers
+0
+1
+11
+
+MONITOR
+19
+478
+245
+523
+NIL
+mean [base-wage] of employers
+0
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -83,6 +261,13 @@ ticks
 ## EXTENDING THE MODEL
 
 (suggested things to add or change in the Code tab to make the model more complicated, detailed, accurate, etc.)
+
+    ; possible extension:
+; two types, with variable cost of getting the credential
+    ; i.e. a low-ability low productivity worker might be lucky and 
+    ; be able to get the credential (e.g. a lazy worker who is good
+    ; at passing tests)
+    ;but that's too complicated to put in now...
 
 ## NETLOGO FEATURES
 
