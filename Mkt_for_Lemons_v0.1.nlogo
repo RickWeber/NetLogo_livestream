@@ -3,9 +3,18 @@
 
 ;; buyers
 breed [buyers buyer]
+;; buyers forecast the productivity of a seller based on observables:
+; signal/credential
+; work history
 
 ;; sellers
 breed [sellers seller]
+; sellers seek a high wage
+; decide whether or not to get a credential
+; have two types: high and low productivity (this could be more fine grained later)
+
+
+
 
 to setup
   clear-all
@@ -15,6 +24,12 @@ end
 to go
   ;
   tick
+end
+
+to hire [ seller ]
+  create-link-to seller [
+    set wage 1
+  ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW

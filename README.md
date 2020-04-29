@@ -2,7 +2,7 @@
 Sharing code for livestreaming NetLogo coding sessions.
 
 ## Twitch
-I've been streaming this work on my [https://www.twitch.tv/that_prof](Twitch channel).
+I've been streaming this work on my [Twitch channel](https://www.twitch.tv/that_prof).
 
 ## Spread of disease model
 
@@ -13,4 +13,4 @@ If you haven't already, you should check out NetLogo. Complexity Explorer has a 
 
 ## Market for Lemons
 
-Because I want to discuss [https://en.wikipedia.org/wiki/Signalling_%28economics%29](signaling) in class, I'm going to build a simple model of the market for lemons.
+Because I want to discuss [signaling](https://en.wikipedia.org/wiki/Signalling_%28economics%29) in class, I'm going to build a simple model of the market for lemons.
