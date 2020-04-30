@@ -31,20 +31,22 @@ end
 to make-those-turtles
   create-employers num-employers [
     set color blue
-    set credential-premium random 100 ;; make sure this makes sense
-    set base-wage random 100 ;; make sure this makes sense
+    set credential-premium random 100
+    set base-wage random 105
     setxy base-wage credential-premium
   ]
   create-workers num-workers [
     set color red
-    setxy random-xcor random-ycor
+;    setxy random-xcor random-ycor
     set credential? false
     ifelse random-float 1 < pct-high-ability [
       set high-ability? true
-      set reservation-wage 100
+      set reservation-wage 100 ; slider
+      set xcor 50 + random 50
     ][
       set high-ability? false
       set reservation-wage 0
+      set xcor random 50
     ]
   ]
   ask turtles [ set size 3 ]
@@ -56,6 +58,7 @@ to go
   ask employers [ search-for-workers ]
   ask workers with [ count my-links > 0 ] [ take-best-offer ]
   produce
+  ask workers [ set ycor utility ]
   if (ticks mod 3 = 0) [ evolve ] ; evolve every 3 periods
   tick
 end
@@ -84,11 +87,13 @@ to search-for-workers
   repeat 5 [ hire one-of workers ] ; 5 could be on a slider
 end
 
-to hire [ seller ]
-  create-link-with seller [
+to hire [ wkr ]
+  create-link-with wkr[
     set wage [ base-wage ] of myself ; self is the employer calling this procedure
-    if [ credential? ] of seller [
-      set wage wage + [ credential-premium ] of myself ; ditto
+    if signal? [
+      if [ credential? ] of wkr [
+        set wage wage + [ credential-premium ] of myself ; ditto
+      ]
     ]
     set accepted? false
   ]
@@ -108,7 +113,7 @@ end
 
 to work-for-myself
   if high-ability? [
-    set utility 50   ; slider
+    set utility reservation-wage   ; slider
   ]
 end
 
@@ -136,8 +141,8 @@ end
 GRAPHICS-WINDOW
 210
 10
-824
-625
+884
+685
 -1
 -1
 6.0
@@ -151,9 +156,9 @@ GRAPHICS-WINDOW
 1
 1
 0
-100
+110
 0
-100
+110
 0
 0
 1
@@ -214,7 +219,7 @@ BUTTON
 56
 NIL
 go
-T
+NIL
 1
 T
 OBSERVER
@@ -330,7 +335,7 @@ success-rate-high
 success-rate-high
 0
 100
-70.0
+0.0
 1
 1
 NIL
@@ -345,11 +350,39 @@ success-rate-low
 success-rate-low
 0
 100
-10.0
+100.0
 1
 1
 NIL
 HORIZONTAL
+
+BUTTON
+52
+68
+115
+101
+NIL
+go
+T
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+SWITCH
+880
+47
+986
+80
+signal?
+signal?
+0
+1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?
