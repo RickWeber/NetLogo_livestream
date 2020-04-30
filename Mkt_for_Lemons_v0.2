@@ -8,14 +8,15 @@
 ; e.g. for high productivity workers, if they don't get paid at least 100, they go self employed
 ; For the signaling aspect:
 ; workers need to forecast their wage with or without the credential...
-; or maybe we just have different probabilities of successfully getting it based on ability.
+
+
 
 breed [employers employer]
 employers-own [ credential-premium base-wage profit ]
 ;; implicitly forecast productivity of turtles with modification for credentialed turtles
 
 breed [workers worker]
-workers-own [ high-ability? credential? utility ]
+workers-own [ high-ability? credential? utility reservation-wage ]
 ; work history as possible extension
 
 links-own [ wage production accepted? ] ; represent a contract
@@ -38,9 +39,17 @@ to make-those-turtles
     set color red
     setxy random-xcor random-ycor
     set credential? false
-    ifelse random-float 1 < pct-high-ability [ set high-ability? true ][ set high-ability? false ]
+    ifelse random-float 1 < pct-high-ability [
+      set high-ability? true
+      set reservation-wage 100
+    ][
+      set high-ability? false
+      set reservation-wage 0
+    ]
   ]
-  ask workers with [ high-ability? ] [ set credential? true ] ; lazy credential process
+  ask turtles [ set size 3 ]
+  ask workers [ credential-prob-version ]
+;  ask workers with [ high-ability? ] [ set credential? true ] ; lazy credential process
 end
 
 to go
@@ -52,6 +61,7 @@ to go
 end
 
 to produce
+  ask workers with [ count my-links = 0 ] [ work-for-myself ]
   ask workers with [ count my-links = 1 ] [ ; workers with a job
     ifelse high-ability? [
       ask my-links [
@@ -62,15 +72,16 @@ to produce
         set production 50
       ]
     ]
-    set utility utility + ([wage] of one-of my-links)
+    set utility ([wage] of one-of my-links)
   ]
   ask employers [
-    set profit profit + (sum [ production ] of my-links) - (sum [ wage ] of my-links)
+    set profit (sum [ production ] of my-links) - (sum [ wage ] of my-links)
+;    set profit profit + (sum [ production ] of my-links) - (sum [ wage ] of my-links)
   ]
 end
 
 to search-for-workers
-  hire one-of workers
+  repeat 5 [ hire one-of workers ] ; 5 could be on a slider
 end
 
 to hire [ seller ]
@@ -84,8 +95,21 @@ to hire [ seller ]
 end
 
 to take-best-offer
-  ask max-one-of my-in-links [ wage ] [ set accepted? true ]
+  ask max-one-of my-in-links [ wage ] [
+    ifelse wage > [reservation-wage] of myself [
+      set accepted? true  ;; accept the job if the wage is high enough.
+    ][ ;; if offered wage isn't high enough
+;      ask myself [ work-for-myself ]; be self employed and make a bit of money.
+      ; that should be in the produce procedure.
+    ]
+  ]
   ask my-in-links with [not accepted?] [die]
+end
+
+to work-for-myself
+  if high-ability? [
+    set utility 50   ; slider
+  ]
 end
 
 to evolve
@@ -98,6 +122,14 @@ to evolve
       set base-wage base-wage + random-normal 0 10
       setxy base-wage credential-premium
     ]
+  ]
+end
+
+to credential-prob-version
+  ifelse high-ability? [
+    if random 100 < success-rate-high [ set credential? true ]
+  ][
+    if random 100 < success-rate-low [ set credential? true ]
   ]
 end
 @#$#@#$#@
@@ -246,6 +278,78 @@ mean [base-wage] of employers
 0
 1
 11
+
+MONITOR
+902
+162
+1084
+207
+NIL
+mean [ utility ] of workers
+0
+1
+11
+
+PLOT
+855
+341
+1305
+674
+plot 1
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+true
+"" ""
+PENS
+"mean utility" 1.0 0 -13345367 true "" "plot mean [ utility ] of workers"
+"mean profit" 1.0 0 -10899396 true "" "plot mean [ profit ] of employers"
+"max profit" 1.0 0 -7500403 true "" "plot max [ profit ] of employers"
+
+MONITOR
+876
+230
+1108
+275
+NIL
+count workers with [ credential? ]
+0
+1
+11
+
+SLIDER
+19
+595
+205
+628
+success-rate-high
+success-rate-high
+0
+100
+70.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+20
+652
+198
+685
+success-rate-low
+success-rate-low
+0
+100
+10.0
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
